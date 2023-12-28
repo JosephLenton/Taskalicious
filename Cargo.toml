@@ -1,0 +1,22 @@
+[package]
+name = "taskalicious"
+authors = ["Joseph Lenton <josephlenton@gmail.com>"]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Common Rust task workers"
+keywords = []
+categories = []
+repository = "https://github.com/JosephLenton/Taskalicious"
+documentation = "https://docs.rs/taskalicious/latest/taskalicious"
+readme = "README.md"
+
+[features]
+
+[dependencies]
+anyhow = "1.0.75"
+rand = "0.8.5"
+tokio = { version = "1.32.0", features = ["time"] }
+
+[dev-dependencies]
+tokio = { version = "1.32.0", features = ["macros", "rt"] }
