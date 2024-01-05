@@ -36,12 +36,33 @@ impl SuccessTrackingTask {
         }
 
         let result = task.await.map_err(Into::into);
-
         if result.is_err() {
             self.abort();
         }
 
         result
+    }
+
+    pub async fn while_alive<F, T, R, E>(&self, task: F) -> Result<()>
+    where
+        F: Fn() -> T,
+        T: Future<Output = Result<R, E>>,
+        E: Into<AnyhowError>,
+    {
+        if !self.is_alive() {
+            return Err(anyhow!("calling run on a task that has already ended"));
+        }
+
+        while self.is_alive() {
+            let result = task().await.map_err(Into::into);
+            if result.is_err() {
+                self.abort();
+                return result.map(|_| ());
+            }
+        }
+
+        // This will be returned if something else killed this.
+        Ok(())
     }
 }
 
@@ -168,5 +189,52 @@ mod test_run {
         }
 
         assert_eq!(num_calls.load(Ordering::Acquire), 3);
+    }
+}
+
+#[cfg(test)]
+mod test_while_alive {
+    use super::*;
+
+    use std::sync::atomic::AtomicU32;
+    use std::sync::atomic::Ordering;
+
+    #[tokio::test]
+    async fn it_should_abort_clones() {
+        let num_calls = Arc::new(AtomicU32::new(0));
+        let task = SuccessTrackingTask::new();
+        let clone = task.clone();
+
+        task.abort();
+        let result = clone
+            .while_alive(|| async {
+                num_calls.fetch_add(1, Ordering::Acquire);
+
+                Ok(()) as Result<()>
+            })
+            .await;
+
+        assert!(result.is_err());
+        assert_eq!(num_calls.load(Ordering::Acquire), 0);
+    }
+
+    #[tokio::test]
+    async fn it_runs_loop_whilst_alive() {
+        let num_calls = Arc::new(AtomicU32::new(0));
+        let task = SuccessTrackingTask::new();
+
+        let result = task
+            .while_alive(|| async {
+                let current_num = num_calls.fetch_add(1, Ordering::Acquire) + 1;
+                if current_num >= 3 {
+                    return Err(anyhow!("Quit after 3 runs"));
+                }
+
+                Ok(()) as Result<()>
+            })
+            .await;
+
+        assert_eq!(num_calls.load(Ordering::Acquire), 3);
+        assert!(result.is_err());
     }
 }
