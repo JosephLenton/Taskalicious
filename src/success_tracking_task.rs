@@ -66,10 +66,13 @@ impl SuccessTrackingTask {
         Ok(())
     }
 
-    pub fn spawn_blocking<F, T, R, E>(&self, task: F) -> JoinHandle<Result<()>>
+    /// Runs the given task in a new blocking thread, on it's own.
+    /// 
+    /// It will spin there for as long as this is alive.
+    pub fn spawn_while_alive<F, T, E>(&self, task: F) -> JoinHandle<Result<()>>
     where
         F: Fn() -> T + Send + 'static,
-        T: Future<Output = Result<R, E>>,
+        T: Future<Output = Result<(), E>> + 'static,
         E: Into<AnyhowError>,
     {
         let clone = self.clone();
