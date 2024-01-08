@@ -69,15 +69,17 @@ impl SuccessTrackingTask {
     /// Runs the given task in a new blocking thread, on it's own.
     /// 
     /// It will spin there for as long as this is alive.
-    pub fn spawn_while_alive<'a, F, T, E>(&self, task: F) -> JoinHandle<Result<()>>
+    pub fn spawn_while_alive<F, T, E>(&self, task: F) -> JoinHandle<Result<()>>
     where
-        F: Fn() -> T + Send + 'static + 'a,
-        T: Future<Output = Result<(), E>> + Send + 'static + 'a,
+        F: Fn() -> T + Send + 'static,
+        T: Future<Output = Result<(), E>> + Send,
         E: Into<AnyhowError> + Send,
     {
         let clone = self.clone();
         tokio::task::spawn_blocking(move || {
-            tokio::runtime::Handle::current().block_on(clone.while_alive(task))
+            tokio::runtime::Handle::current().block_on(async move {
+                clone.while_alive(task).await
+            })
         })
     }
 }
