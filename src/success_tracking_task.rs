@@ -72,7 +72,7 @@ impl SuccessTrackingTask {
     pub fn spawn_while_alive<F, T, E>(&self, task: F) -> JoinHandle<Result<()>>
     where
         F: Fn() -> T + Send + 'static,
-        T: Future<Output = Result<(), E>> + 'static,
+        T: Future<Output = Result<(), E>> + Send + 'static,
         E: Into<AnyhowError>,
     {
         let clone = self.clone();
