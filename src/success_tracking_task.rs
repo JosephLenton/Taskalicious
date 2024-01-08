@@ -44,9 +44,9 @@ impl SuccessTrackingTask {
         result
     }
 
-    pub async fn while_alive<F, T, R, E>(&self, task: F) -> Result<()>
+    pub async fn while_alive<F, T, R, E>(&self, mut task: F) -> Result<()>
     where
-        F: Fn() -> T,
+        F: FnMut() -> T,
         T: Future<Output = Result<R, E>>,
         E: Into<AnyhowError>,
     {
@@ -67,7 +67,7 @@ impl SuccessTrackingTask {
     }
 
     /// Runs the given task in a new blocking thread, on it's own.
-    /// 
+    ///
     /// It will spin there for as long as this is alive.
     pub fn spawn_while_alive<F, T, E>(&self, task: F) -> JoinHandle<Result<()>>
     where
@@ -77,9 +77,7 @@ impl SuccessTrackingTask {
     {
         let clone = self.clone();
         tokio::task::spawn_blocking(move || {
-            tokio::runtime::Handle::current().block_on(async move {
-                clone.while_alive(task).await
-            })
+            tokio::runtime::Handle::current().block_on(async move { clone.while_alive(task).await })
         })
     }
 }
