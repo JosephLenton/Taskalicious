@@ -16,7 +16,7 @@ readme = "README.md"
 [dependencies]
 anyhow = "1.0.75"
 rand = "0.8.5"
-tokio = { version = "1.32.0", features = ["time"] }
+tokio = { version = "1.32.0", features = ["time", "rt"] }
 
 [dev-dependencies]
 tokio = { version = "1.32.0", features = ["macros", "rt"] }
