@@ -5,6 +5,7 @@ use std::future::Future;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use tokio::task::JoinHandle;
 
 #[derive(Debug, Clone)]
 pub struct SuccessTrackingTask {
@@ -63,6 +64,18 @@ impl SuccessTrackingTask {
 
         // This will be returned if something else killed this.
         Ok(())
+    }
+
+    pub fn spawn_blocking<F, T, R, E>(&self, task: F) -> JoinHandle<Result<()>>
+    where
+        F: Fn() -> T + Send + 'static,
+        T: Future<Output = Result<R, E>>,
+        E: Into<AnyhowError>,
+    {
+        let clone = self.clone();
+        tokio::task::spawn_blocking(move || {
+            tokio::runtime::Handle::current().block_on(clone.while_alive(task))
+        })
     }
 }
 
