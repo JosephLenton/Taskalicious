@@ -44,10 +44,9 @@ impl SuccessTrackingTask {
         result
     }
 
-    pub async fn while_alive<F, T, R, E>(&self, mut task: F) -> Result<()>
+    pub async fn while_alive<T, E>(&self, mut task: T) -> Result<()>
     where
-        F: FnMut() -> T,
-        T: Future<Output = Result<R, E>>,
+        T: crate::task::Task<Output = Result<(), E>>,
         E: Into<AnyhowError>,
     {
         if !self.is_alive() {
@@ -55,7 +54,7 @@ impl SuccessTrackingTask {
         }
 
         while self.is_alive() {
-            let result = task().await.map_err(Into::into);
+            let result = task.call().await.map_err(Into::into);
             if result.is_err() {
                 self.abort();
                 return result.map(|_| ());
@@ -66,13 +65,12 @@ impl SuccessTrackingTask {
         Ok(())
     }
 
-    /// Runs the given task in a new blocking thread, on it's own.
-    ///
-    /// It will spin there for as long as this is alive.
-    pub fn spawn_while_alive<F, T, E>(&self, task: F) -> JoinHandle<Result<()>>
+    // Runs the given task in a new blocking thread, on it's own.
+    //
+    // It will spin there for as long as this is alive.
+    pub fn spawn_while_alive<T, E>(&self, task: T) -> JoinHandle<Result<()>>
     where
-        F: Fn() -> T + Send + 'static,
-        T: Future<Output = Result<(), E>> + Send,
+        T: crate::task::Task<Output = Result<(), E>> + Send + 'static,
         E: Into<AnyhowError> + Send,
     {
         let clone = self.clone();
@@ -212,6 +210,7 @@ mod test_run {
 mod test_while_alive {
     use super::*;
 
+    use crate::FnTask;
     use std::sync::atomic::AtomicU32;
     use std::sync::atomic::Ordering;
 
@@ -223,11 +222,11 @@ mod test_while_alive {
 
         task.abort();
         let result = clone
-            .while_alive(|| async {
+            .while_alive(FnTask::new(|| async {
                 num_calls.fetch_add(1, Ordering::Acquire);
 
                 Ok(()) as Result<()>
-            })
+            }))
             .await;
 
         assert!(result.is_err());
@@ -240,14 +239,14 @@ mod test_while_alive {
         let task = SuccessTrackingTask::new();
 
         let result = task
-            .while_alive(|| async {
+            .while_alive(FnTask::new(|| async {
                 let current_num = num_calls.fetch_add(1, Ordering::Acquire) + 1;
                 if current_num >= 3 {
                     return Err(anyhow!("Quit after 3 runs"));
                 }
 
                 Ok(()) as Result<()>
-            })
+            }))
             .await;
 
         assert_eq!(num_calls.load(Ordering::Acquire), 3);
