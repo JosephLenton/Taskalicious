@@ -10,13 +10,19 @@ use tokio::task::JoinHandle;
 #[derive(Debug, Clone)]
 pub struct SuccessTrackingTask {
     is_alive: Arc<AtomicBool>,
+    is_debug_print: bool,
 }
 
 impl SuccessTrackingTask {
     pub fn new() -> Self {
         Self {
             is_alive: Arc::new(AtomicBool::new(true)),
+            is_debug_print: false,
         }
+    }
+
+    pub fn set_debug_print_err(&mut self) {
+        self.is_debug_print = true;
     }
 
     pub fn is_alive(&self) -> bool {
@@ -37,7 +43,11 @@ impl SuccessTrackingTask {
         }
 
         let result = task.await.map_err(Into::into);
-        if result.is_err() {
+        if let Err(err) = &result {
+            if self.is_debug_print {
+                eprintln!("Success Tracking Error failed (run) | {:?}", err)
+            }
+
             self.abort();
         }
 
@@ -55,9 +65,14 @@ impl SuccessTrackingTask {
 
         while self.is_alive() {
             let result = task.call().await.map_err(Into::into);
-            if result.is_err() {
+
+            if let Err(err) = result {
+                if self.is_debug_print {
+                    eprintln!("Success Tracking Error failed (while_alive) | {:?}", err)
+                }
+
                 self.abort();
-                return result.map(|_| ());
+                return Err(err.into());
             }
         }
 
