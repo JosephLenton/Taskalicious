@@ -18,3 +18,6 @@ pub use self::task::*;
 
 mod task_ext;
 pub use self::task_ext::*;
+
+mod task_spawn_ext;
+pub use self::task_spawn_ext::*;

@@ -9,6 +9,8 @@ pub trait TaskExt: Task + Sized {
 impl<T, O, E> TaskExt for T
 where
     T: Task<Output = Result<O, E>>,
+    O: Send,
+    E: Send,
 {
     fn with_retry(self, retries: Retry) -> RetryTask<Self> {
         RetryTask::new(self, retries)
