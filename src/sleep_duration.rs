@@ -4,12 +4,12 @@ use std::ops::Range;
 use std::time::Duration;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub enum SleepTime {
+pub enum SleepDuration {
     Duration(Duration),
     MinMax(Duration, Duration),
 }
 
-impl SleepTime {
+impl SleepDuration {
     pub const fn from_millis(millis: u64) -> Self {
         Self::Duration(Duration::from_millis(millis))
     }
@@ -22,25 +22,25 @@ impl SleepTime {
     }
 }
 
-impl From<SleepTime> for Duration {
-    fn from(value: SleepTime) -> Self {
+impl From<SleepDuration> for Duration {
+    fn from(value: SleepDuration) -> Self {
         value.into_duration()
     }
 }
 
-impl From<Duration> for SleepTime {
+impl From<Duration> for SleepDuration {
     fn from(duration: Duration) -> Self {
         Self::Duration(duration)
     }
 }
 
-impl From<Range<Duration>> for SleepTime {
+impl From<Range<Duration>> for SleepDuration {
     fn from(min_max: Range<Duration>) -> Self {
         Self::MinMax(min_max.start, min_max.end)
     }
 }
 
-impl From<(Duration, Duration)> for SleepTime {
+impl From<(Duration, Duration)> for SleepDuration {
     fn from((min, max): (Duration, Duration)) -> Self {
         Self::MinMax(min, max)
     }

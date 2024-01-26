@@ -31,8 +31,8 @@ where
     where
         T: Task<Output = Result<O, E>>,
     {
-        let num_retries = self.retries.num_retries;
-        let sleep_time = self.retries.sleep_time;
+        let num_retries = self.retries.retries();
+        let sleep_duration = self.retries.sleep_duration();
 
         let mut last_error: Option<E> = None;
 
@@ -44,7 +44,7 @@ where
                     last_error = Some(err);
 
                     if retry < num_retries {
-                        sleep(sleep_time.into_duration()).await;
+                        sleep(sleep_duration.into_duration()).await;
                         continue;
                     }
                 }
@@ -94,8 +94,8 @@ mod test_run {
         let num_calls = AtomicU32::new(0);
 
         let retries = Retry::new()
-            .sleep_time(Duration::from_millis(0))
-            .retries(10);
+            .set_sleep_duration(Duration::from_millis(0))
+            .set_retries(10);
 
         let task = FnTask::new(|| async {
             let current_val = num_calls.fetch_add(1, Ordering::Acquire) + 1;
@@ -112,12 +112,12 @@ mod test_run {
     }
 
     #[tokio::test]
-    async fn it_should_wait_for_sleep_time() {
+    async fn it_should_wait_for_sleep_duration() {
         let num_calls = AtomicU32::new(0);
 
         let retries = Retry::new()
-            .sleep_time(Duration::from_millis(100))
-            .retries(10);
+            .set_sleep_duration(Duration::from_millis(100))
+            .set_retries(10);
 
         let task = FnTask::new(|| async {
             let current_val = num_calls.fetch_add(1, Ordering::Acquire) + 1;
@@ -142,8 +142,8 @@ mod test_run {
         let num_calls = AtomicU32::new(0);
 
         let retries = Retry::new()
-            .sleep_time(Duration::from_millis(0))
-            .retries(10);
+            .set_sleep_duration(Duration::from_millis(0))
+            .set_retries(10);
 
         let task = FnTask::new(|| async {
             num_calls.fetch_add(1, Ordering::Acquire);

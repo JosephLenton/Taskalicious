@@ -1,39 +1,47 @@
 use crate::FnTask;
 use crate::RetryTask;
-use crate::SleepTime;
+use crate::SleepDuration;
 use crate::Task;
 use ::std::future::Future;
 
 const DEFAULT_NUM_RETRIES: u32 = 3;
-const DEFAULT_SLEEP_TIME: SleepTime = SleepTime::from_millis(10_000);
+const DEFAULT_SLEEP_DURATION: SleepDuration = SleepDuration::from_millis(10_000);
 
 #[derive(Copy, Clone, Debug)]
 pub struct Retry {
-    pub num_retries: u32,
-    pub sleep_time: SleepTime,
+    num_retries: u32,
+    sleep_duration: SleepDuration,
 }
 
 impl Retry {
     pub fn new() -> Self {
         Self {
             num_retries: DEFAULT_NUM_RETRIES,
-            sleep_time: DEFAULT_SLEEP_TIME,
+            sleep_duration: DEFAULT_SLEEP_DURATION,
         }
     }
 
-    pub fn retries(self, num_retries: u32) -> Self {
+    pub fn retries(self) -> u32 {
+        self.num_retries
+    }
+
+    pub fn set_retries(self, num_retries: u32) -> Self {
         Self {
             num_retries,
             ..self
         }
     }
 
-    pub fn sleep_time<S>(self, sleep_time: S) -> Self
+    pub fn sleep_duration(self) -> SleepDuration {
+        self.sleep_duration
+    }
+
+    pub fn set_sleep_duration<S>(self, sleep_duration: S) -> Self
     where
-        S: Into<SleepTime>,
+        S: Into<SleepDuration>,
     {
         Self {
-            sleep_time: sleep_time.into(),
+            sleep_duration: sleep_duration.into(),
             ..self
         }
     }
