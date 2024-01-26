@@ -1,6 +1,8 @@
+use crate::FnTask;
 use crate::RetryTask;
 use crate::SleepTime;
 use crate::Task;
+use ::std::future::Future;
 
 const DEFAULT_NUM_RETRIES: u32 = 3;
 const DEFAULT_SLEEP_TIME: SleepTime = SleepTime::from_millis(10_000);
@@ -36,10 +38,26 @@ impl Retry {
         }
     }
 
-    pub async fn build_task<'a, T, O, E>(self, task: T) -> RetryTask<T>
+    pub async fn run_fn<'a, T, F, O, E>(self, fn_task: T) -> Result<O, E>
+    where
+        T: FnMut() -> F,
+        F: Future<Output = Result<O, E>>,
+    {
+        let task = FnTask::new(fn_task);
+        self.run(task).await
+    }
+
+    pub async fn run<'a, T, O, E>(self, task: T) -> Result<O, E>
     where
         T: Task<Output = Result<O, E>>,
     {
-        RetryTask::new(task, self)
+        self.build_task(task).call().await
+    }
+
+    pub fn build_task<'a, T, O, E>(self, task: T) -> RetryTask<T>
+    where
+        T: Task<Output = Result<O, E>>,
+    {
+        RetryTask::new(task.into(), self)
     }
 }
